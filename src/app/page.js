@@ -324,13 +324,6 @@ export default function Home() {
             />
             <button className={styles.searchBtn} id="search-btn">Cari</button>
           </div>
-          <div className={styles.heroStats}>
-            <div className={styles.heroStat}><strong>{stats.total}</strong><span>Destinasi</span></div>
-            <div className={styles.heroStatDiv}/>
-            <div className={styles.heroStat}><strong>{stats.provinces}</strong><span>Provinsi</span></div>
-            <div className={styles.heroStatDiv}/>
-            <div className={styles.heroStat}><strong>100%</strong><span>Terpercaya</span></div>
-          </div>
         </div>
         <div className={styles.heroScroll} aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -407,42 +400,39 @@ export default function Home() {
       {/* ── ABOUT ── */}
       <section className={styles.about} id="about">
         <div className={styles.container}>
-          <div className={styles.aboutGrid}>
-            <div className={styles.aboutContent}>
-              <div className={styles.sectionLabel}>Tentang Kami</div>
-              <h2 className={styles.aboutTitle}>Mengapa Memilih <span className={styles.gradient}>NusaJelajah?</span></h2>
-              <p className={styles.aboutText}>
-                Kami adalah platform wisata Indonesia yang berdedikasi membantu Anda menemukan dan merencanakan perjalanan impian ke berbagai penjuru Nusantara.
-              </p>
-              <div className={styles.aboutFeatures}>
-                {[
-                  { icon: '🛡️', title: 'Terpercaya', desc: 'Destinasi terverifikasi langsung dari tim kami di lapangan' },
-                  { icon: '💬', title: 'Respon Cepat', desc: 'Chat langsung via WhatsApp, kami siap membantu kapan saja' },
-                  { icon: '📍', title: 'Lokal & Autentik', desc: 'Pengalaman wisata yang autentik bersama pemandu lokal berpengalaman' },
-                ].map(f => (
-                  <div key={f.title} className={styles.aboutFeature}>
-                    <div className={styles.featureIcon}>{f.icon}</div>
-                    <div>
-                      <h4>{f.title}</h4>
-                      <p>{f.desc}</p>
-                    </div>
-                  </div>
-                ))}
+          <div className={styles.aboutHead}>
+            <div className={styles.sectionLabel}>Tentang Kami</div>
+            <h2 className={styles.aboutTitle}>Mengapa Memilih <span className={styles.gradient}>NusaJelajah?</span></h2>
+            <p className={styles.aboutText}>
+              Kami adalah platform wisata Indonesia yang berdedikasi membantu Anda menemukan dan merencanakan perjalanan impian ke berbagai penjuru Nusantara.
+            </p>
+          </div>
+          <div className={styles.featureCards}>
+            {[
+              { icon: '🛡️', title: 'Terpercaya', desc: 'Destinasi terverifikasi langsung dari tim kami di lapangan. Data selalu diperbarui.' },
+              { icon: '💬', title: 'Respon Cepat', desc: 'Chat langsung via WhatsApp, kami siap membantu Anda kapan saja dan di mana saja.' },
+              { icon: '📍', title: 'Lokal & Autentik', desc: 'Pengalaman wisata autentik bersama pemandu lokal berpengalaman yang ramah.' },
+              { icon: '💰', title: 'Harga Terjangkau', desc: 'Paket wisata dengan harga terbaik tanpa mengorbankan kualitas pengalaman.' },
+              { icon: '🗓️', title: 'Jadwal Fleksibel', desc: 'Tentukan sendiri tanggal keberangkatan sesuai kenyamanan dan jadwal Anda.' },
+              { icon: '🌿', title: 'Wisata Bertanggung Jawab', desc: 'Kami berkomitmen menjaga kelestarian alam dan budaya destinasi wisata.' },
+            ].map(f => (
+              <div key={f.title} className={styles.featureCard}>
+                <div className={styles.featureCardIcon}>{f.icon}</div>
+                <h4 className={styles.featureCardTitle}>{f.title}</h4>
+                <p className={styles.featureCardDesc}>{f.desc}</p>
               </div>
-            </div>
-            <div className={styles.aboutStats}>
-              {[
-                { num: '8+', label: 'Destinasi Pilihan' },
-                { num: '6', label: 'Provinsi Terjangkau' },
-                { num: '500+', label: 'Wisatawan Puas' },
-                { num: '24/7', label: 'Siap Melayani' },
-              ].map(s => (
-                <div key={s.label} className={styles.aboutStat}>
-                  <strong>{s.num}</strong>
-                  <span>{s.label}</span>
-                </div>
-              ))}
-            </div>
+            ))}
+          </div>
+          <div className={styles.aboutCta}>
+            <a
+              href={waLink('6281234567890', 'Paket Wisata NusaJelajah')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.aboutWaBtn}
+              id="about-wa-btn"
+            >
+              <IconWa /> Hubungi Kami via WhatsApp
+            </a>
           </div>
         </div>
       </section>
