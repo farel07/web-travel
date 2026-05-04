@@ -1,65 +1,479 @@
-import Image from "next/image";
+'use client';
+import { useState, useMemo, useEffect } from 'react';
+import styles from './page.module.css';
+import destinations from '../data/destinations.json';
 
-export default function Home() {
+// ─── CONFIG ────────────────────────────────────────────────────
+const IG_URL = 'https://www.instagram.com/nusajelajah'; // ganti username IG di sini
+
+const CATEGORIES = [
+  { id: 'semua', label: 'Semua', icon: '🗺️' },
+  { id: 'gunung', label: 'Gunung', icon: '⛰️' },
+  { id: 'bahari', label: 'Bahari', icon: '🌊' },
+  { id: 'budaya', label: 'Budaya', icon: '🏛️' },
+  { id: 'danau', label: 'Danau', icon: '🏞️' },
+];
+
+const SORT_OPTIONS = [
+  { id: 'popular', label: 'Terpopuler' },
+  { id: 'price-asc', label: 'Harga Terendah' },
+  { id: 'price-desc', label: 'Harga Tertinggi' },
+];
+
+function formatPrice(p) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(p);
+}
+
+function waLink(number, name) {
+  const text = encodeURIComponent(`Halo, saya tertarik dengan paket wisata *${name}*. Boleh minta info lebih lanjut?`);
+  return `https://wa.me/${number}?text=${text}`;
+}
+
+// ─── ICONS ─────────────────────────────────────────────────────
+const IconWa = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.108.548 4.09 1.508 5.814L.057 23.386a.75.75 0 00.914.914l5.57-1.451A11.943 11.943 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.72 9.72 0 01-4.964-1.361l-.357-.21-3.702.965.985-3.596-.232-.371A9.72 9.72 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+  </svg>
+);
+
+const IconIg = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+  </svg>
+);
+
+// ─── CARD ──────────────────────────────────────────────────────
+function DestinationCard({ dest, onClick }) {
+  const [imgError, setImgError] = useState(false);
+  const diffColor = { Mudah: '#16a34a', Sedang: '#d97706', Menantang: '#ea580c', Sulit: '#dc2626' };
+  const catIcon = CATEGORIES.find(c => c.id === dest.category)?.icon;
+
+  function handleWa(e) {
+    e.stopPropagation();
+    window.open(waLink(dest.whatsapp, dest.name), '_blank', 'noopener');
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <article
+      className={styles.card}
+      onClick={() => onClick(dest)}
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onClick(dest)}
+      role="button"
+      aria-label={`Lihat detail ${dest.name}`}
+    >
+      <div className={styles.cardImgWrap}>
+        <img
+          src={imgError ? '' : dest.image}
+          alt={dest.name}
+          className={styles.cardImg}
+          onError={() => setImgError(true)}
+          loading="lazy"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <div className={styles.cardOverlay} />
+        {dest.badge && <span className={styles.badge}>{dest.badge}</span>}
+        <div className={styles.cardCategory}>{catIcon} {dest.category}</div>
+      </div>
+      <div className={styles.cardBody}>
+        <div className={styles.cardMeta}>
+          <span className={styles.cardDifficulty} style={{ color: diffColor[dest.difficulty] }}>
+            ● {dest.difficulty}
+          </span>
+          <span className={styles.cardDuration}>⏱ {dest.duration}</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <h3 className={styles.cardTitle}>{dest.name}</h3>
+        <p className={styles.cardLocation}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+            <circle cx="12" cy="9" r="2.5"/>
+          </svg>
+          {dest.location}
+        </p>
+        <p className={styles.cardDesc}>{dest.description.substring(0, 88)}…</p>
+        <div className={styles.cardFooter}>
+          <div className={styles.cardPrice}>
+            <span className={styles.priceLabel}>Mulai dari</span>
+            <span className={styles.priceVal}>{formatPrice(dest.price)}</span>
+          </div>
+          <button
+            className={styles.cardWaBtn}
+            onClick={handleWa}
+            id={`wa-card-${dest.slug}`}
+            aria-label={`Chat WhatsApp untuk ${dest.name}`}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <IconWa /> Chat WA
+          </button>
         </div>
-      </main>
+      </div>
+    </article>
+  );
+}
+
+// ─── MODAL ─────────────────────────────────────────────────────
+function Modal({ dest, onClose }) {
+  const diffColor = { Mudah: '#16a34a', Sedang: '#d97706', Menantang: '#ea580c', Sulit: '#dc2626' };
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [onClose]);
+
+  if (!dest) return null;
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalImgWrap}>
+          <img src={dest.image} alt={dest.name} className={styles.modalImg} />
+          <div className={styles.modalImgOverlay} />
+          <button className={styles.modalClose} onClick={onClose} aria-label="Tutup">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+          {dest.badge && <span className={styles.modalBadge}>{dest.badge}</span>}
+        </div>
+
+        <div className={styles.modalBody}>
+          <div className={styles.modalHeader}>
+            <div>
+              <h2 className={styles.modalTitle}>{dest.name}</h2>
+              <p className={styles.modalLocation}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                  <circle cx="12" cy="9" r="2.5"/>
+                </svg>
+                {dest.location}
+              </p>
+            </div>
+            <div className={styles.modalPriceSide}>
+              <p className={styles.modalPriceLabel}>Mulai dari</p>
+              <p className={styles.modalPrice}>{formatPrice(dest.price)}<span>/orang</span></p>
+            </div>
+          </div>
+
+          <div className={styles.modalStats}>
+            <div className={styles.modalStat}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+              </svg>
+              <span>{dest.duration}</span>
+            </div>
+            <div className={styles.modalStat}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 18a5 5 0 00-10 0M12 9a3 3 0 100-6 3 3 0 000 6z"/>
+              </svg>
+              <span style={{ color: diffColor[dest.difficulty] }}>{dest.difficulty}</span>
+            </div>
+            <div className={styles.modalStat}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+              </svg>
+              <span>{dest.bestTime}</span>
+            </div>
+          </div>
+
+          <p className={styles.modalDesc}>{dest.description}</p>
+
+          <div className={styles.modalHighlights}>
+            <h4>Highlight Destinasi</h4>
+            <ul>
+              {dest.highlights.map((h, i) => (
+                <li key={i}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M5 13l4 4L19 7"/>
+                  </svg>
+                  {h}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className={styles.modalTags}>
+            {dest.tags.map(tag => <span key={tag} className={styles.tag}>#{tag}</span>)}
+          </div>
+
+          <div className={styles.modalCta}>
+            <a
+              href={waLink(dest.whatsapp, dest.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.btnWa}
+              id={`book-${dest.slug}`}
+            >
+              <IconWa />
+              Pesan via WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+// ─── PAGE ──────────────────────────────────────────────────────
+export default function Home() {
+  const [activeCategory, setActiveCategory] = useState('semua');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('popular');
+  const [selectedDest, setSelectedDest] = useState(null);
+  const [navScrolled, setNavScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setNavScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const filtered = useMemo(() => {
+    let list = destinations;
+    if (activeCategory !== 'semua') list = list.filter(d => d.category === activeCategory);
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      list = list.filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.location.toLowerCase().includes(q) ||
+        d.tags.some(t => t.toLowerCase().includes(q))
+      );
+    }
+    switch (sortBy) {
+      case 'price-asc':  return [...list].sort((a, b) => a.price - b.price);
+      case 'price-desc': return [...list].sort((a, b) => b.price - a.price);
+      default:           return list;
+    }
+  }, [activeCategory, search, sortBy]);
+
+  const stats = useMemo(() => ({
+    total: destinations.length,
+    provinces: [...new Set(destinations.map(d => d.province))].length,
+  }), []);
+
+  const LogoSvg = ({ id }) => (
+    <svg viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="16" fill={`url(#lg-${id})`}/>
+      <path d="M8 20c3-6 5-10 8-10s5 4 8 10" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M16 10v12" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+      <defs>
+        <linearGradient id={`lg-${id}`} x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#0284c7"/><stop offset="1" stopColor="#6366f1"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+
+  return (
+    <main>
+      {/* ── NAVBAR ── */}
+      <nav className={`${styles.nav} ${navScrolled ? styles.navScrolled : ''}`} id="navbar">
+        <div className={styles.navInner}>
+          <div className={styles.navLogo}>
+            <LogoSvg id="nav" />
+            <span>NusaJelajah</span>
+          </div>
+          <div className={styles.navLinks}>
+            <a href="#destinations" id="nav-destinations">Destinasi</a>
+            <a href="#about" id="nav-about">Tentang</a>
+          </div>
+          <div className={styles.navActions}>
+            <a
+              href={IG_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.navIg}
+              id="nav-ig"
+              aria-label="Instagram NusaJelajah"
+            >
+              <IconIg /> Instagram
+            </a>
+            <a href="#destinations" className={styles.navCta} id="nav-cta">Mulai Perjalanan</a>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── HERO ── */}
+      <section className={styles.hero} id="hero">
+        <div className={styles.heroImg}>
+          <img src="/hero_bromo.png" alt="Gunung Bromo yang megah saat sunrise" />
+          <div className={styles.heroDim} />
+        </div>
+        <div className={styles.heroContent}>
+          <div className={styles.heroBadge}>
+            <span>🇮🇩</span> Jelajahi Keindahan Nusantara
+          </div>
+          <h1 className={styles.heroTitle}>
+            Temukan <span className={styles.heroHighlight}>Surga</span><br/>di Indonesia
+          </h1>
+          <p className={styles.heroSubtitle}>
+            Dari gunung berapi yang megah hingga lautan biru jernih, Indonesia menyimpan keajaiban yang menunggu untuk dijelajahi.
+          </p>
+          <div className={styles.heroSearch}>
+            <svg className={styles.searchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input
+              id="hero-search"
+              type="search"
+              placeholder="Cari destinasi, lokasi, atau aktivitas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={styles.searchInput}
+              aria-label="Cari destinasi wisata"
+            />
+            <button className={styles.searchBtn} id="search-btn">Cari</button>
+          </div>
+          <div className={styles.heroStats}>
+            <div className={styles.heroStat}><strong>{stats.total}</strong><span>Destinasi</span></div>
+            <div className={styles.heroStatDiv}/>
+            <div className={styles.heroStat}><strong>{stats.provinces}</strong><span>Provinsi</span></div>
+            <div className={styles.heroStatDiv}/>
+            <div className={styles.heroStat}><strong>100%</strong><span>Terpercaya</span></div>
+          </div>
+        </div>
+        <div className={styles.heroScroll} aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14M5 12l7 7 7-7"/>
+          </svg>
+        </div>
+      </section>
+
+      {/* ── DESTINATIONS ── */}
+      <section className={styles.section} id="destinations">
+        <div className={styles.container}>
+          <div className={styles.sectionHead}>
+            <div className={styles.sectionLabel}>Destinasi Pilihan</div>
+            <h2 className={styles.sectionTitle}>
+              Tempat Wisata <span className={styles.gradient}>Terbaik Indonesia</span>
+            </h2>
+            <p className={styles.sectionSub}>
+              Dari keajaiban vulkanik hingga keindahan bawah laut — hubungi kami langsung via WhatsApp untuk info & pemesanan
+            </p>
+          </div>
+
+          <div className={styles.filterBar}>
+            <div className={styles.filterCats} role="tablist" aria-label="Filter kategori">
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  id={`filter-${cat.id}`}
+                  className={`${styles.filterBtn} ${activeCategory === cat.id ? styles.filterBtnActive : ''}`}
+                  onClick={() => setActiveCategory(cat.id)}
+                  role="tab"
+                  aria-selected={activeCategory === cat.id}
+                >
+                  {cat.icon} {cat.label}
+                </button>
+              ))}
+            </div>
+            <div className={styles.filterSort}>
+              <label htmlFor="sort-select" className={styles.sortLabel}>Urutkan:</label>
+              <select
+                id="sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className={styles.sortSelect}
+              >
+                {SORT_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.resultsInfo} aria-live="polite">
+            {search
+              ? `Menampilkan ${filtered.length} hasil untuk "${search}"`
+              : `${filtered.length} destinasi tersedia`}
+          </div>
+
+          {filtered.length > 0 ? (
+            <div className={styles.grid}>
+              {filtered.map(dest => (
+                <DestinationCard key={dest.id} dest={dest} onClick={setSelectedDest} />
+              ))}
+            </div>
+          ) : (
+            <div className={styles.empty}>
+              <span>🔍</span>
+              <p>Tidak ada destinasi yang cocok dengan &ldquo;{search}&rdquo;</p>
+              <button onClick={() => { setSearch(''); setActiveCategory('semua'); }} className={styles.emptyBtn}>
+                Reset Filter
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── ABOUT ── */}
+      <section className={styles.about} id="about">
+        <div className={styles.container}>
+          <div className={styles.aboutGrid}>
+            <div className={styles.aboutContent}>
+              <div className={styles.sectionLabel}>Tentang Kami</div>
+              <h2 className={styles.aboutTitle}>Mengapa Memilih <span className={styles.gradient}>NusaJelajah?</span></h2>
+              <p className={styles.aboutText}>
+                Kami adalah platform wisata Indonesia yang berdedikasi membantu Anda menemukan dan merencanakan perjalanan impian ke berbagai penjuru Nusantara.
+              </p>
+              <div className={styles.aboutFeatures}>
+                {[
+                  { icon: '🛡️', title: 'Terpercaya', desc: 'Destinasi terverifikasi langsung dari tim kami di lapangan' },
+                  { icon: '💬', title: 'Respon Cepat', desc: 'Chat langsung via WhatsApp, kami siap membantu kapan saja' },
+                  { icon: '📍', title: 'Lokal & Autentik', desc: 'Pengalaman wisata yang autentik bersama pemandu lokal berpengalaman' },
+                ].map(f => (
+                  <div key={f.title} className={styles.aboutFeature}>
+                    <div className={styles.featureIcon}>{f.icon}</div>
+                    <div>
+                      <h4>{f.title}</h4>
+                      <p>{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className={styles.aboutStats}>
+              {[
+                { num: '8+', label: 'Destinasi Pilihan' },
+                { num: '6', label: 'Provinsi Terjangkau' },
+                { num: '500+', label: 'Wisatawan Puas' },
+                { num: '24/7', label: 'Siap Melayani' },
+              ].map(s => (
+                <div key={s.label} className={styles.aboutStat}>
+                  <strong>{s.num}</strong>
+                  <span>{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer className={styles.footer}>
+        <div className={styles.container}>
+          <div className={styles.footerInner}>
+            <div className={styles.footerBrand}>
+              <div className={styles.navLogo}>
+                <LogoSvg id="footer" />
+                <span>NusaJelajah</span>
+              </div>
+              <p>Temukan keajaiban Indonesia bersama kami. Jelajahi setiap sudut nusantara yang memukau.</p>
+            </div>
+            <a
+              href={IG_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.footerIg}
+              id="footer-ig"
+              aria-label="Follow Instagram NusaJelajah"
+            >
+              <IconIg /> @nusajelajah
+            </a>
+            <p className={styles.footerCopy}>© 2025 NusaJelajah. Dibuat dengan ❤️ untuk Nusantara.</p>
+          </div>
+        </div>
+      </footer>
+
+      {selectedDest && <Modal dest={selectedDest} onClose={() => setSelectedDest(null)} />}
+    </main>
   );
 }
