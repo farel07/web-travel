@@ -1,24 +1,12 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import styles from './page.module.css';
 import destinations from '../data/destinations.json';
 
 // ─── CONFIG ────────────────────────────────────────────────────
-const IG_URL = 'https://www.instagram.com/nusajelajah'; // ganti username IG di sini
+const IG_URL = 'https://www.instagram.com/libraarifin'; 
 
-const CATEGORIES = [
-  { id: 'semua', label: 'Semua', icon: '🗺️' },
-  { id: 'gunung', label: 'Gunung', icon: '⛰️' },
-  { id: 'bahari', label: 'Bahari', icon: '🌊' },
-  { id: 'budaya', label: 'Budaya', icon: '🏛️' },
-  { id: 'danau', label: 'Danau', icon: '🏞️' },
-];
 
-const SORT_OPTIONS = [
-  { id: 'popular', label: 'Terpopuler' },
-  { id: 'price-asc', label: 'Harga Terendah' },
-  { id: 'price-desc', label: 'Harga Tertinggi' },
-];
 
 function formatPrice(p) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(p);
@@ -43,11 +31,54 @@ const IconIg = () => (
   </svg>
 );
 
+// ─── IMAGE CAROUSEL ────────────────────────────────────────────
+function ImageCarousel({ images, alt, className, wrapClassName }) {
+  const [current, setCurrent] = useState(0);
+  const imgs = images && images.length > 0 ? images : ['/placeholder.png'];
+
+  const prev = useCallback((e) => {
+    e.stopPropagation();
+    setCurrent(i => (i - 1 + imgs.length) % imgs.length);
+  }, [imgs.length]);
+
+  const next = useCallback((e) => {
+    e.stopPropagation();
+    setCurrent(i => (i + 1) % imgs.length);
+  }, [imgs.length]);
+
+  return (
+    <div className={`${styles.carousel} ${wrapClassName || ''}`}>
+      <div className={styles.carouselTrack} style={{ transform: `translateX(-${current * 100}%)` }}>
+        {imgs.map((src, i) => (
+          <img key={i} src={src} alt={`${alt} ${i + 1}`} className={`${styles.carouselImg} ${className || ''}`} loading="lazy" />
+        ))}
+      </div>
+      {imgs.length > 1 && (
+        <>
+          <button className={`${styles.carouselBtn} ${styles.carouselBtnPrev}`} onClick={prev} aria-label="Foto sebelumnya">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <button className={`${styles.carouselBtn} ${styles.carouselBtnNext}`} onClick={next} aria-label="Foto berikutnya">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <div className={styles.carouselDots}>
+            {imgs.map((_, i) => (
+              <button
+                key={i}
+                className={`${styles.carouselDot} ${i === current ? styles.carouselDotActive : ''}`}
+                onClick={(e) => { e.stopPropagation(); setCurrent(i); }}
+                aria-label={`Foto ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── CARD ──────────────────────────────────────────────────────
 function DestinationCard({ dest, onClick }) {
-  const [imgError, setImgError] = useState(false);
-  const diffColor = { Mudah: '#16a34a', Sedang: '#d97706', Menantang: '#ea580c', Sulit: '#dc2626' };
-  const catIcon = CATEGORIES.find(c => c.id === dest.category)?.icon;
 
   function handleWa(e) {
     e.stopPropagation();
@@ -64,22 +95,12 @@ function DestinationCard({ dest, onClick }) {
       aria-label={`Lihat detail ${dest.name}`}
     >
       <div className={styles.cardImgWrap}>
-        <img
-          src={imgError ? '' : dest.image}
-          alt={dest.name}
-          className={styles.cardImg}
-          onError={() => setImgError(true)}
-          loading="lazy"
-        />
+        <ImageCarousel images={dest.images} alt={dest.name} className={styles.cardImg} />
         <div className={styles.cardOverlay} />
         {dest.badge && <span className={styles.badge}>{dest.badge}</span>}
-        <div className={styles.cardCategory}>{catIcon} {dest.category}</div>
       </div>
       <div className={styles.cardBody}>
         <div className={styles.cardMeta}>
-          <span className={styles.cardDifficulty} style={{ color: diffColor[dest.difficulty] }}>
-            ● {dest.difficulty}
-          </span>
           <span className={styles.cardDuration}>⏱ {dest.duration}</span>
         </div>
         <h3 className={styles.cardTitle}>{dest.name}</h3>
@@ -112,8 +133,6 @@ function DestinationCard({ dest, onClick }) {
 
 // ─── MODAL ─────────────────────────────────────────────────────
 function Modal({ dest, onClose }) {
-  const diffColor = { Mudah: '#16a34a', Sedang: '#d97706', Menantang: '#ea580c', Sulit: '#dc2626' };
-
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
@@ -127,7 +146,7 @@ function Modal({ dest, onClose }) {
     <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true">
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalImgWrap}>
-          <img src={dest.image} alt={dest.name} className={styles.modalImg} />
+          <ImageCarousel images={dest.images} alt={dest.name} className={styles.modalImg} wrapClassName={styles.modalCarousel} />
           <div className={styles.modalImgOverlay} />
           <button className={styles.modalClose} onClick={onClose} aria-label="Tutup">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -164,12 +183,6 @@ function Modal({ dest, onClose }) {
             </div>
             <div className={styles.modalStat}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M17 18a5 5 0 00-10 0M12 9a3 3 0 100-6 3 3 0 000 6z"/>
-              </svg>
-              <span style={{ color: diffColor[dest.difficulty] }}>{dest.difficulty}</span>
-            </div>
-            <div className={styles.modalStat}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
               </svg>
               <span>{dest.bestTime}</span>
@@ -178,23 +191,24 @@ function Modal({ dest, onClose }) {
 
           <p className={styles.modalDesc}>{dest.description}</p>
 
-          <div className={styles.modalHighlights}>
-            <h4>Highlight Destinasi</h4>
-            <ul>
-              {dest.highlights.map((h, i) => (
-                <li key={i}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M5 13l4 4L19 7"/>
-                  </svg>
-                  {h}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className={styles.modalTags}>
-            {dest.tags.map(tag => <span key={tag} className={styles.tag}>#{tag}</span>)}
-          </div>
+          {dest.destinations && dest.destinations.length > 0 && (
+            <div className={styles.modalDestinations}>
+              <h4 className={styles.modalDestinationsTitle}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                  <circle cx="12" cy="9" r="2.5"/>
+                </svg>
+                Destinasi yang Dikunjungi
+              </h4>
+              <div className={styles.modalDestinationsList}>
+                {dest.destinations.map((spot, i) => (
+                  <span key={i} className={styles.modalDestinationChip}>
+                    📍 {spot}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className={styles.modalCta}>
             <a
@@ -216,11 +230,23 @@ function Modal({ dest, onClose }) {
 
 // ─── PAGE ──────────────────────────────────────────────────────
 export default function Home() {
-  const [activeCategory, setActiveCategory] = useState('semua');
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('popular');
   const [selectedDest, setSelectedDest] = useState(null);
   const [navScrolled, setNavScrolled] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+
+  // tutup menu burger saat resize ke desktop
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth > 768) setNavOpen(false); };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // kunci scroll saat menu terbuka
+  useEffect(() => {
+    document.body.style.overflow = navOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [navOpen]);
 
   useEffect(() => {
     const onScroll = () => setNavScrolled(window.scrollY > 60);
@@ -229,22 +255,15 @@ export default function Home() {
   }, []);
 
   const filtered = useMemo(() => {
-    let list = destinations;
-    if (activeCategory !== 'semua') list = list.filter(d => d.category === activeCategory);
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      list = list.filter(d =>
-        d.name.toLowerCase().includes(q) ||
-        d.location.toLowerCase().includes(q) ||
-        d.tags.some(t => t.toLowerCase().includes(q))
-      );
-    }
-    switch (sortBy) {
-      case 'price-asc':  return [...list].sort((a, b) => a.price - b.price);
-      case 'price-desc': return [...list].sort((a, b) => b.price - a.price);
-      default:           return list;
-    }
-  }, [activeCategory, search, sortBy]);
+    if (!search.trim()) return destinations;
+    const q = search.toLowerCase().trim();
+    return destinations.filter(d =>
+      d.name.toLowerCase().includes(q) ||
+      d.location.toLowerCase().includes(q) ||
+      d.description.toLowerCase().includes(q) ||
+      (d.destinations && d.destinations.some(s => s.toLowerCase().includes(q)))
+    );
+  }, [search]);
 
   const stats = useMemo(() => ({
     total: destinations.length,
@@ -266,6 +285,7 @@ export default function Home() {
 
   return (
     <main>
+
       {/* ── NAVBAR ── */}
       <nav className={`${styles.nav} ${navScrolled ? styles.navScrolled : ''}`} id="navbar">
         <div className={styles.navInner}>
@@ -273,6 +293,8 @@ export default function Home() {
             <LogoSvg id="nav" />
             <span>NusaJelajah</span>
           </div>
+
+          {/* Desktop links */}
           <div className={styles.navLinks}>
             <a href="#destinations" id="nav-destinations">Destinasi</a>
             <a href="#about" id="nav-about">Tentang</a>
@@ -290,8 +312,46 @@ export default function Home() {
             </a>
             <a href="#destinations" className={styles.navCta} id="nav-cta">Mulai Perjalanan</a>
           </div>
+
+          {/* Burger button — mobile only */}
+          <button
+            className={`${styles.burger} ${navOpen ? styles.burgerOpen : ''}`}
+            onClick={() => setNavOpen(o => !o)}
+            aria-label={navOpen ? 'Tutup menu' : 'Buka menu'}
+            aria-expanded={navOpen}
+            id="burger-btn"
+          >
+            <span /><span /><span />
+          </button>
         </div>
       </nav>
+
+      {/* Mobile menu overlay */}
+      {navOpen && (
+        <div className={styles.mobileOverlay} onClick={() => setNavOpen(false)} aria-hidden="true" />
+      )}
+
+      {/* Mobile drawer */}
+      <div className={`${styles.mobileMenu} ${navOpen ? styles.mobileMenuOpen : ''}`} id="mobile-menu">
+        <a href="#destinations" className={styles.mobileLink} onClick={() => setNavOpen(false)}>🗺️ Destinasi</a>
+        <a href="#about" className={styles.mobileLink} onClick={() => setNavOpen(false)}>ℹ️ Tentang</a>
+        <a
+          href={IG_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.mobileLinkIg}
+          onClick={() => setNavOpen(false)}
+        >
+          <IconIg /> Instagram
+        </a>
+        <a
+          href="#destinations"
+          className={styles.mobileCta}
+          onClick={() => setNavOpen(false)}
+        >
+          Mulai Perjalanan
+        </a>
+      </div>
 
       {/* ── HERO ── */}
       <section className={styles.hero} id="hero">
@@ -341,43 +401,10 @@ export default function Home() {
               Tempat Wisata <span className={styles.gradient}>Terbaik Indonesia</span>
             </h2>
             <p className={styles.sectionSub}>
-              Dari keajaiban vulkanik hingga keindahan bawah laut — hubungi kami langsung via WhatsApp untuk info & pemesanan
+              Dari keajaiban vulkanik hingga keindahan bawah laut — hubungi kami langsung via WhatsApp untuk info &amp; pemesanan
             </p>
           </div>
 
-          <div className={styles.filterBar}>
-            <div className={styles.filterCats} role="tablist" aria-label="Filter kategori">
-              {CATEGORIES.map(cat => (
-                <button
-                  key={cat.id}
-                  id={`filter-${cat.id}`}
-                  className={`${styles.filterBtn} ${activeCategory === cat.id ? styles.filterBtnActive : ''}`}
-                  onClick={() => setActiveCategory(cat.id)}
-                  role="tab"
-                  aria-selected={activeCategory === cat.id}
-                >
-                  {cat.icon} {cat.label}
-                </button>
-              ))}
-            </div>
-            <div className={styles.filterSort}>
-              <label htmlFor="sort-select" className={styles.sortLabel}>Urutkan:</label>
-              <select
-                id="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className={styles.sortSelect}
-              >
-                {SORT_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className={styles.resultsInfo} aria-live="polite">
-            {search
-              ? `Menampilkan ${filtered.length} hasil untuk "${search}"`
-              : `${filtered.length} destinasi tersedia`}
-          </div>
 
           {filtered.length > 0 ? (
             <div className={styles.grid}>
@@ -389,7 +416,7 @@ export default function Home() {
             <div className={styles.empty}>
               <span>🔍</span>
               <p>Tidak ada destinasi yang cocok dengan &ldquo;{search}&rdquo;</p>
-              <button onClick={() => { setSearch(''); setActiveCategory('semua'); }} className={styles.emptyBtn}>
+              <button onClick={() => setSearch('')} className={styles.emptyBtn}>
                 Reset Filter
               </button>
             </div>
